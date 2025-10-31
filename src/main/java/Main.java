@@ -16,7 +16,7 @@ public class Main {
           while (true){
               byte[] buffer = new byte[1024];
               int read = clientSocket.getInputStream().read(buffer);
-              String message = new String(buffer).trim();
+              String message = new String(buffer, 0, read).trim();
               System.out.println("Received: " + message);
               clientSocket.getOutputStream().write("+PONG\r\n".getBytes());
           }
