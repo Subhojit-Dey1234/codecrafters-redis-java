@@ -12,9 +12,15 @@ public class Main {
           serverSocket = new ServerSocket(port);
           serverSocket.setReuseAddress(true);
           clientSocket = serverSocket.accept();
+
           while (true){
+              byte[] buffer = new byte[1024];
+              int read = clientSocket.getInputStream().read(buffer);
+              String message = new String(buffer).trim();
+              System.out.println("Received: " + message);
               clientSocket.getOutputStream().write("+PONG\r\n".getBytes());
           }
+
         } catch (IOException e) {
           System.out.println("IOException: " + e.getMessage());
         } finally {
