@@ -4,6 +4,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.SocketException;
 
 public class Main {
     static void main(String[] args) {
@@ -31,8 +32,11 @@ public class Main {
                 String line = in.readLine();
                 System.out.println(line);
                 outputStream.write("+PONG\r\n".getBytes());
+                outputStream.flush();
             }
-        } catch (IOException e) {
+        }
+        catch (SocketException ignored) {}
+        catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
