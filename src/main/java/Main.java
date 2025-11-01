@@ -27,10 +27,9 @@ public class Main {
             OutputStream outputStream = clientSocket.getOutputStream();
             BufferedReader in = new BufferedReader(
                     new InputStreamReader(clientSocket.getInputStream(), StandardCharsets.UTF_8)
-            )){
-
-            while (true) {
-                String content = in.readLine();
+            );){
+            String content;
+            while ((content = in.readLine()) != null) {
                 if(in.readLine() == null) break;
                 if(content.equalsIgnoreCase("ping")){
                     outputStream.write("+PONG\r\n".getBytes());
