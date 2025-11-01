@@ -67,14 +67,20 @@ public class Redis {
                         int startInd = Integer.parseInt(commands[2]);
                         int endInd = Integer.parseInt(commands[3]);
 
+                        if (startInd < 0) {
+                            startInd = list.size() + startInd;
+                            if (startInd < 0) startInd = 0;
+                        }
+                        if (endInd < 0) {
+                            endInd = list.size() + endInd;
+                            if (endInd < 0) endInd = 0;
+                        }
+
                         if(startInd > endInd){
                             sendMessage("*0\r\n");
                         }else{
                             StringBuilder builder = new StringBuilder();
                             int cnt = 0;
-
-                            System.out.println(Math.min(endInd, list.size()-1));
-
                             for(int i = startInd; i <= Math.min(endInd, list.size()-1); i++){
                                 cnt ++;
                                 String value = list.get(i);
