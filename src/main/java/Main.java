@@ -15,11 +15,10 @@ public class Main {
             serverSocket = new ServerSocket(port);
             serverSocket.setReuseAddress(true);
             clientSocket = serverSocket.accept();
-            ExecutorService executorService = Executors.newFixedThreadPool(2);
-
             while (true) {
+                clientSocket = serverSocket.accept();
                 Socket finalClientSocket = clientSocket;
-                executorService.submit(() -> {
+                new Thread(() -> {
                     byte[] buffer = new byte[1024];
                     int read = 0;
                     try {
@@ -34,7 +33,7 @@ public class Main {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                });
+                }).start();
             }
 
         } catch (IOException e) {
