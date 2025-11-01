@@ -56,15 +56,40 @@ public class Redis {
                             sendMessage("$-1\r\n");
                     } else if (redisCommand.equalsIgnoreCase("rpush")) {
                         String key = commands[1];
-
                         for(int i = 2; i < commands.length; i++){
                             listHashMap.computeIfAbsent(key, (_) -> new ArrayList<>()).add(commands[i]);
                         }
                         sendMessage(":"+ listHashMap.get(key).size() +"\r\n");
+                    } else if (redisCommand.equalsIgnoreCase("lrange")) {
+                        String key = commands[1];
+                        List<String> list = listHashMap.getOrDefault(key, List.of());
+
+                        int startInd = Integer.parseInt(commands[2]);
+                        int endInd = Integer.parseInt(commands[3]);
+
+                        if(startInd > endInd){
+                            sendMessage("*0\r\n");
+                        }else{
+                            StringBuilder builder = new StringBuilder();
+                            int cnt = 0;
+
+                            System.out.println(Math.min(endInd, list.size()-1));
+
+                            for(int i = startInd; i <= Math.min(endInd, list.size()-1); i++){
+                                cnt ++;
+                                String value = list.get(i);
+                                builder.append("$").append(value.length()).append("\r\n");
+                                builder.append(value).append("\r\n");
+                            }
+                            String cntString = "*" + cnt + "\r\n";
+                            sendMessage(cntString + builder);
+                        }
                     }
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+            System.out.println(ignored.getMessage());
+        }
     }
 
     private String[] getStrings(int numberOfCommands) throws IOException {
