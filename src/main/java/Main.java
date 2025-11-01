@@ -16,9 +16,10 @@ public class Main {
             serverSocket.setReuseAddress(true);
             while (true) {
                 clientSocket = serverSocket.accept();
-                Socket finalClientSocket = clientSocket;
+                Socket finalClientSocket1 = clientSocket;
                 new Thread(() -> {
                     byte[] buffer = new byte[1024];
+                    Socket finalClientSocket = finalClientSocket1;
                     int read = 0;
                     try {
                         read = finalClientSocket.getInputStream().read(buffer);
