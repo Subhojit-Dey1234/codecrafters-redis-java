@@ -16,9 +16,7 @@ public class Main {
                 Socket finalSocket = serverSocket.accept();
                 new Thread(() -> handleRequest(finalSocket)).start();
             }
-        } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
-        }
+        } catch (IOException ignored) {}
     }
 
     static void handleRequest(Socket clientSocket) {
