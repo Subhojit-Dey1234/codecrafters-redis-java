@@ -14,7 +14,6 @@ public class Main {
         try {
             serverSocket = new ServerSocket(port);
             serverSocket.setReuseAddress(true);
-            clientSocket = serverSocket.accept();
             while (true) {
                 clientSocket = serverSocket.accept();
                 Socket finalClientSocket = clientSocket;
