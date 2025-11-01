@@ -6,7 +6,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Main {
-    public static void main(String[] args) {
+    static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
         int port = 6379;
         try {
@@ -30,6 +30,8 @@ public class Main {
 
             while (true) {
                 if(in.readLine() == null) break;
+                String line = in.readLine();
+                System.out.println(line);
                 outputStream.write("+PONG\r\n".getBytes());
             }
         } catch (IOException e) {
