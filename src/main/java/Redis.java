@@ -56,7 +56,10 @@ public class Redis {
                             sendMessage("$-1\r\n");
                     } else if (redisCommand.equalsIgnoreCase("rpush")) {
                         String key = commands[1];
-                        listHashMap.computeIfAbsent(key, (_) -> new ArrayList<>()).add(commands[2]);
+
+                        for(int i = 2; i < commands.length; i++){
+                            listHashMap.computeIfAbsent(key, (_) -> new ArrayList<>()).add(commands[i]);
+                        }
                         sendMessage(":"+ listHashMap.get(key).size() +"\r\n");
                     }
                 }
