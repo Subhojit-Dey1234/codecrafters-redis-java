@@ -17,7 +17,9 @@ public class Main {
                 Socket finalSocket = serverSocket.accept();
                 new Thread(() -> handleRequest(finalSocket)).start();
             }
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) {
+            System.exit(-1);
+        }
     }
 
     static void handleRequest(Socket clientSocket) {
