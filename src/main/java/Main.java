@@ -38,12 +38,12 @@ public class Main {
 
             while (true) {
                 // hacky way to read input; will change
-                if (in.readLine() == null) {
-                    break;
-                }
-                in.readLine();
-                String line = in.readLine();
-                System.out.println("Last line: " + line);
+//                if (in.readLine() == null) {
+//                    break;
+//                }
+//                in.readLine();
+//                String line = in.readLine();
+//                System.out.println("Last line: " + line);
                 outputStream.write("+PONG\r\n".getBytes());
             }
 
