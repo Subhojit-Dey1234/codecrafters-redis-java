@@ -41,7 +41,9 @@ public class Main {
                 }
             }
         }
-        catch (IOException ignored) {}
+        catch (IOException ignored) {
+            System.out.println(ignored.getMessage());
+        }
     }
 
 
