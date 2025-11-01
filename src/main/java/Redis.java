@@ -2,13 +2,16 @@ import java.io.*;
 import java.net.Socket;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class Redis {
 
     private final HashMap<String, ValueWithTime> map = new HashMap<>();
     private final BufferedWriter outputStream;
     private final BufferedReader in;
+    private final HashMap<String, List<String>> listHashMap = new HashMap<>();
 
     public Redis(Socket clientSocket) throws IOException {
         this.in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
@@ -47,11 +50,14 @@ public class Redis {
                                 valueForMap = null;
                             }
                         }
-
                         if(valueForMap != null)
                             sendMessage("$" + valueForMap.getValue().length() + "\r\n" + valueForMap.getValue() + "\r\n");
                         else
                             sendMessage("$-1\r\n");
+                    } else if (redisCommand.equalsIgnoreCase("rpush")) {
+                        String key = commands[1];
+                        listHashMap.computeIfAbsent(key, (_) -> new ArrayList<>()).add(commands[2]);
+                        sendMessage(":"+ listHashMap.get(key).size() +"\r\n");
                     }
                 }
             }
