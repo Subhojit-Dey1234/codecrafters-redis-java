@@ -37,10 +37,7 @@ public class Main {
                 outputStream.flush();
             }
         }
-        catch (SocketException ignored) {}
-        catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        catch (IOException ignored) {}
     }
 
 
