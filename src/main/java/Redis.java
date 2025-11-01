@@ -1,10 +1,12 @@
 import java.io.*;
 import java.net.Socket;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 
 public class Redis {
 
-    private final HashMap<String, String> map = new HashMap<>();
+    private final HashMap<String, ValueWithTime> map = new HashMap<>();
     private final BufferedWriter outputStream;
     private final BufferedReader in;
 
@@ -26,12 +28,30 @@ public class Redis {
                     } else if (redisCommand.equalsIgnoreCase("echo")) {
                         sendMessage("$" + commands[1].length() + "\r\n" + commands[1] + "\r\n");
                     } else if (redisCommand.equalsIgnoreCase("set")) {
-                        map.put(commands[1], commands[2]);
+                        int time = -1;
+                        if(commands.length > 3) {
+                            time = Integer.parseInt(commands[4]);
+                            if(commands[3].equalsIgnoreCase("ex")) time = 1000 * time;
+                        }
+                        map.put(commands[1], new ValueWithTime(commands[2], Instant.now(), time));
                         sendMessage("+OK\r\n");
                     } else if (redisCommand.equalsIgnoreCase("get")) {
+                        Instant now = Instant.now();
+
                         String key = commands[1];
-                        String value = map.getOrDefault(key, "");
-                        sendMessage("$" + value.length() + "\r\n" + value + "\r\n");
+                        ValueWithTime valueForMap = map.get(key);
+                        if(valueForMap != null) {
+                            long elapsedMillis = Duration.between(valueForMap.getGetTime(), now).toMillis();
+                            if(valueForMap.getTime() != -1 && elapsedMillis >= valueForMap.getTime()){
+                                map.remove(key);
+                                valueForMap = null;
+                            }
+                        }
+
+                        if(valueForMap != null)
+                            sendMessage("$" + valueForMap.getValue().length() + "\r\n" + valueForMap.getValue() + "\r\n");
+                        else
+                            sendMessage("$-1\r\n");
                     }
                 }
             }
@@ -56,26 +76,18 @@ public class Redis {
 
 }
 
+class ValueWithTime {
+    private final String value;
+    private final Instant getTime;
+    private final long time;
 
-enum RedisCommand {
-    PING("ping", "+", 0), ECHO("echo", "$", 1), GET("get", "+", 1), SET("set", "$", 2);
-
-    private String command;
-    private String startChars;
-    private int numberOfCommands;
-
-    RedisCommand(String command, String startChars, int numberOfCommands) {
-        this.command = command;
-        this.startChars = startChars;
-        this.numberOfCommands = numberOfCommands;
+    public ValueWithTime(String value, Instant getTime, long time) {
+        this.value = value;
+        this.getTime = getTime;
+        this.time = time;
     }
 
-    public static RedisCommand getCommand(String command) {
-        for (RedisCommand redisCommand : RedisCommand.values()) {
-            if (redisCommand.command.equalsIgnoreCase(command)) {
-                return redisCommand;
-            }
-        }
-        throw new RuntimeException("Redis Invalid Command");
-    }
+    public String getValue() {return value;}
+    public Instant getGetTime() {return getTime;}
+    public long getTime() {return time;}
 }
