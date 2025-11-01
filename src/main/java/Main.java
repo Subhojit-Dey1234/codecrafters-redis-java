@@ -28,8 +28,6 @@ public class Main {
 
             while (true) {
                 if(in.readLine() == null) break;
-                String line = in.readLine();
-                System.out.println(line);
                 outputStream.write("+PONG\r\n".getBytes());
             }
         } catch (IOException e) {
