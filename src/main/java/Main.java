@@ -1,61 +1,46 @@
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 
 public class Main {
-    public static void main(String[] args){
-        // You can use print statements as follows for debugging, they'll be visible when running tests.
+    static void main(String[] args) {
         System.out.println("Logs from your program will appear here!");
-
-        //  Uncomment this block to pass the first stage
-        ServerSocket serverSocket = null;
         int port = 6379;
         try {
-            serverSocket = new ServerSocket(port);
-            // Since the tester restarts your program quite often, setting SO_REUSEADDR
-            // ensures that we don't run into 'Address already in use' errors
+            ServerSocket serverSocket = new ServerSocket(port);
             serverSocket.setReuseAddress(true);
-            // Wait for connection from client.
-            while(true){
-                Socket clientSocket = serverSocket.accept();
-                Thread clientThread = new Thread(() ->{
-                    try{
-                        processBuffer(clientSocket);
-                    } catch(Exception e){
-                        System.out.println("Exception: " + e.getMessage());
-                    }
-                });
-                clientThread.start();
+            while (true) {
+                Socket finalSocket = serverSocket.accept();
+                new Thread(() -> handleRequest(finalSocket)).start();
             }
-
-        } catch (IOException e) {
-            System.out.println("IOException: " + e.getMessage());
+        } catch (IOException ignored) {
+            System.exit(-1);
         }
     }
 
-    private static void processBuffer(Socket clientSocket){
-        try (BufferedReader clientInput = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-             BufferedWriter clientOutput = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));){
+    static void handleRequest(Socket clientSocket) {
+        try(clientSocket;
+            BufferedWriter outputStream = new BufferedWriter(
+                    new OutputStreamWriter(clientSocket.getOutputStream())
+            );
+            BufferedReader in = new BufferedReader(
+                    new InputStreamReader(clientSocket.getInputStream())
+            );){
             String content;
-
-            while((content = clientInput.readLine()) != null){
+            while ((content = in.readLine()) != null) {
                 if(content.equalsIgnoreCase("ping")){
-                    clientOutput.write("+PONG\r\n");
-                    clientOutput.flush();
+                    outputStream.write("+PONG\r\n");
+                    outputStream.flush();
                 } else if(content.equalsIgnoreCase("echo")){
-                    String numBytes = clientInput.readLine();
-                    clientOutput.write(numBytes + "\r\n" + clientInput.readLine() + "\r\n");
-                    clientOutput.flush();
+                    String a = in.readLine();
+                    String outputMsg = (a + "\r\n" + in.readLine() + "\r\n");
+                    outputStream.write(outputMsg);
+                    outputStream.flush();
                 }
             }
-        } catch (IOException e){
-            throw new RuntimeException(e);
         }
+        catch (IOException ignored) {}
     }
+
+
 }
