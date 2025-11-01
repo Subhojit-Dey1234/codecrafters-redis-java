@@ -30,14 +30,16 @@ public class Main {
             )){
 
             while (true) {
+                String content = in.readLine();
                 if(in.readLine() == null) break;
-                String line = in.readLine();
-                System.out.println(line);
-                if(line.equalsIgnoreCase("echo")){
-                    System.out.println("Echo is called....");
+                if(content.equalsIgnoreCase("ping")){
+                    outputStream.write("+PONG\r\n".getBytes());
+                    outputStream.flush();
+                } else if(content.equalsIgnoreCase("echo")){
+                    String numBytes = in.readLine();
+                    outputStream.write((numBytes + "\r\n" + in.readLine() + "\r\n").getBytes());
+                    outputStream.flush();
                 }
-                outputStream.write("+PONG\r\n".getBytes());
-                outputStream.flush();
             }
         }
         catch (IOException ignored) {}
