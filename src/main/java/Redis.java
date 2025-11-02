@@ -60,7 +60,15 @@ public class Redis {
                             listHashMap.computeIfAbsent(key, (_) -> new ArrayList<>()).add(commands[i]);
                         }
                         sendMessage(":"+ listHashMap.get(key).size() +"\r\n");
-                    } else if (redisCommand.equalsIgnoreCase("lrange")) {
+                    }
+                    else if (redisCommand.equalsIgnoreCase("lpush")) {
+                        String key = commands[1];
+                        for(int i = 2; i < commands.length; i++){
+                            listHashMap.computeIfAbsent(key, (_) -> new ArrayList<>()).addFirst(commands[i]);
+                        }
+                        sendMessage(":"+ listHashMap.get(key).size() +"\r\n");
+                    }
+                    else if (redisCommand.equalsIgnoreCase("lrange")) {
                         String key = commands[1];
                         List<String> list = listHashMap.getOrDefault(key, List.of());
 
