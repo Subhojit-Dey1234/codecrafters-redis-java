@@ -2,10 +2,7 @@ import java.io.*;
 import java.net.Socket;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class Redis {
@@ -67,20 +64,28 @@ public class Redis {
                     }
                     else if (redisCommand.equalsIgnoreCase("lpush")) {
                         String key = commands[1];
-                        for(int i = 2; i < commands.length; i++){
-                            listHashMap.computeIfAbsent(key, (_) -> new ArrayList<>()).addFirst(commands[i]);
+                        List<String> lst = listHashMap.computeIfAbsent(key,
+                                _ -> Collections.synchronizedList(new ArrayList<>())
+                        );
+
+                        synchronized(lst) {
+                            for(int i = 2; i < commands.length; i++) {
+                                lst.addFirst(commands[i]);
+                            }
+                            sendMessage(":" + lst.size() + "\r\n");
                         }
-                        sendMessage(":"+ listHashMap.get(key).size() +"\r\n");
                     }
                     else if (redisCommand.equalsIgnoreCase("llen")) {
                         String key = commands[1];
-                        sendMessage(":"+ listHashMap.getOrDefault(key, new ArrayList<>()).size() +"\r\n");
+                        sendMessage(":"+
+                                listHashMap.getOrDefault(key, Collections.synchronizedList(new ArrayList<>())).size()
+                                +"\r\n");
                     }
                     else if(redisCommand.equalsIgnoreCase("lpop")){
                         String key = commands[1];
                         int index = -1;
                         if( commands.length > 2 ) index = Integer.parseInt(commands[2]);
-                        List<String> lst = listHashMap.getOrDefault(key,new ArrayList<>());
+                        List<String> lst = listHashMap.getOrDefault(key, Collections.synchronizedList(new ArrayList<>()));
                         if(lst.isEmpty()){
                             sendMessage("$-1\r\n");
                         }else{
@@ -138,10 +143,10 @@ public class Redis {
                         String key = commands[1];
                         long timeOutDuration = Integer.parseInt(commands[2]);
                         long currMill = System.currentTimeMillis();
-                        int sz = listHashMap.getOrDefault(key, new ArrayList<>()).size();
+                        int sz = listHashMap.getOrDefault(key, Collections.synchronizedList(new ArrayList<>())).size();
                         boolean f = true;
                         while(true){
-                            List<String> lst = listHashMap.getOrDefault(key, new ArrayList<>());
+                            List<String> lst = listHashMap.getOrDefault(key, Collections.synchronizedList(new ArrayList<>()));
                             if(lst.size() != sz){
                                 f = false;
                                 StringBuilder msg = new StringBuilder();
