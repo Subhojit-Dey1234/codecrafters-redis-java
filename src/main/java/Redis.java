@@ -68,6 +68,10 @@ public class Redis {
                         }
                         sendMessage(":"+ listHashMap.get(key).size() +"\r\n");
                     }
+                    else if (redisCommand.equalsIgnoreCase("llen")) {
+                        String key = commands[1];
+                        sendMessage(":"+ listHashMap.getOrDefault(key, new ArrayList<>()).size() +"\r\n");
+                    }
                     else if (redisCommand.equalsIgnoreCase("lrange")) {
                         String key = commands[1];
                         List<String> list = listHashMap.getOrDefault(key, List.of());
