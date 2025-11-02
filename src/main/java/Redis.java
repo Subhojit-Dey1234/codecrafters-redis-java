@@ -74,13 +74,29 @@ public class Redis {
                     }
                     else if(redisCommand.equalsIgnoreCase("lpop")){
                         String key = commands[1];
+                        int index = -1;
+                        if( commands.length > 2 ) index = Integer.parseInt(commands[2]);
                         List<String> lst = listHashMap.getOrDefault(key,new ArrayList<>());
                         if(lst.isEmpty()){
                             sendMessage("$-1\r\n");
                         }else{
-                            String firstEl = lst.getFirst();
-                            lst.removeFirst();
-                            sendMessage("$" + firstEl.length() + "\r\n" + firstEl +"\r\n");
+                            if(index < 0){
+                                String value = lst.getFirst();
+                                lst.removeFirst();
+                                sendMessage("$" + value.length() + "\r\n" + value + "\r\n");
+                            }else{
+                                StringBuilder builder = new StringBuilder();
+                                int cnt = 0;
+                                while (cnt < index && !lst.isEmpty()){
+                                    String value = lst.getFirst();
+                                    builder.append("$").append(value.length()).append("\r\n");
+                                    builder.append(value).append("\r\n");
+                                    lst.removeFirst();
+                                    cnt ++;
+                                }
+                                String cntString = "*" + cnt + "\r\n";
+                                sendMessage(cntString + builder);
+                            }
                         }
                     }
                     else if (redisCommand.equalsIgnoreCase("lrange")) {
