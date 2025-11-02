@@ -72,6 +72,17 @@ public class Redis {
                         String key = commands[1];
                         sendMessage(":"+ listHashMap.getOrDefault(key, new ArrayList<>()).size() +"\r\n");
                     }
+                    else if(redisCommand.equalsIgnoreCase("lpop")){
+                        String key = commands[1];
+                        List<String> lst = listHashMap.getOrDefault(key,new ArrayList<>());
+                        if(lst.isEmpty()){
+                            sendMessage("$-1\r\n");
+                        }else{
+                            String firstEl = lst.getFirst();
+                            lst.removeFirst();
+                            sendMessage("$" + firstEl.length() + "\r\n" + firstEl +"\r\n");
+                        }
+                    }
                     else if (redisCommand.equalsIgnoreCase("lrange")) {
                         String key = commands[1];
                         List<String> list = listHashMap.getOrDefault(key, List.of());
