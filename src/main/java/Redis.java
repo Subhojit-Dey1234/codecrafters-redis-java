@@ -159,7 +159,7 @@ public class Redis {
                                 sendMessage(msg.toString());
                                 break;
                             }
-//                            Thread.sleep(2);
+                            Thread.sleep(10);
                         }
                         if(f){
                             sendMessage("*-1\r\n");
