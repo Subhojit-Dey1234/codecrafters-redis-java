@@ -5,10 +5,12 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Redis {
 
-    private final HashMap<String, ValueWithTime> map = new HashMap<>();
+    private final Map<String, ValueWithTime> map = new ConcurrentHashMap<>();
     private final BufferedWriter outputStream;
     private final BufferedReader in;
     private final HashMap<String, List<String>> listHashMap = new HashMap<>();
@@ -129,6 +131,32 @@ public class Redis {
                             String cntString = "*" + cnt + "\r\n";
                             sendMessage(cntString + builder);
                         }
+                    }
+                    else if(redisCommand.equalsIgnoreCase("blpop")){
+                        String key = commands[1];
+                        long timeOutDuration = Integer.parseInt(commands[2]);
+                        long currMill = System.currentTimeMillis();
+                        int sz = listHashMap.getOrDefault(key, new ArrayList<>()).size();
+                        boolean f = false;
+//                        while(timeOutDuration == 0 || (System.currentTimeMillis() - currMill) < timeOutDuration){
+//                            List<String> lst = listHashMap.getOrDefault(key, new ArrayList<>());
+//                            if(lst.size() != sz){
+//                                f = true;
+//                                StringBuilder msg = new StringBuilder();
+//                                msg.append("*").append("2").append("\r\n");
+//                                msg.append("$").append(lst.size()).append("\r\n");
+//                                msg.append(key).append("\r\n");
+//                                String value = lst.getFirst();
+//                                lst.removeFirst();
+//                                msg.append("$").append(value.length()).append("\r\n");
+//                                msg.append(value).append("\r\n");
+//                                sendMessage(msg.toString());
+//                                break;
+//                            }
+//                        }
+//                        if(f){
+//                            sendMessage("*-1\r\n");
+//                        }
                     }
                 }
             }
