@@ -20,7 +20,6 @@ public class Redis {
 
     public void handleRequest() {
         String content;
-        System.out.println(Thread.currentThread().getName());
         try {
             while ((content = in.readLine()) != null) {
                 if (content.startsWith("*")) {
@@ -141,11 +140,11 @@ public class Redis {
                     }
                     else if(redisCommand.equalsIgnoreCase("blpop")){
                         String key = commands[1];
-                        long timeOutDuration = Integer.parseInt(commands[2]);
+                        long timeOutDuration = (Integer.parseInt(commands[2])) * 1000L;
                         long currMill = System.currentTimeMillis();
                         int sz = listHashMap.getOrDefault(key, Collections.synchronizedList(new ArrayList<>())).size();
                         boolean f = true;
-                        while(true){
+                        while((timeOutDuration == 0) || (System.currentTimeMillis() - currMill) <= timeOutDuration){
                             List<String> lst = listHashMap.getOrDefault(key, Collections.synchronizedList(new ArrayList<>()));
                             if(lst.size() != sz){
                                 f = false;
@@ -160,10 +159,12 @@ public class Redis {
                                 sendMessage(msg.toString());
                                 break;
                             }
+
+                            Thread.sleep(100);
                         }
-//                        if(f){
-//                            sendMessage("*-1\r\n");
-//                        }
+                        if(f){
+                            sendMessage("*-1\r\n");
+                        }
                     }
                 }
             }
