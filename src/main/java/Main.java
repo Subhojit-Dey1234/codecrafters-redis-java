@@ -14,7 +14,7 @@ public class Main {
             Map<String, List<String>> listHashMap = new ConcurrentHashMap<>();
             while (true) {
                 Socket finalSocket = serverSocket.accept();
-                Redis redis = new Redis(finalSocket, listHashMap);
+                Redis redis = new Redis(finalSocket, listHashMap, new ConcurrentHashMap<>());
                 new Thread(redis::handleRequest).start();
             }
         } catch (IOException ignored) {
