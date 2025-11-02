@@ -13,15 +13,17 @@ public class Redis {
     private final Map<String, ValueWithTime> map = new ConcurrentHashMap<>();
     private final BufferedWriter outputStream;
     private final BufferedReader in;
-    private final HashMap<String, List<String>> listHashMap = new HashMap<>();
+    private final Map<String, List<String>> listHashMap;
 
-    public Redis(Socket clientSocket) throws IOException {
+    public Redis(Socket clientSocket, Map<String, List<String>> listHashMap) throws IOException {
         this.in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         this.outputStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
+        this.listHashMap = listHashMap;
     }
 
     public void handleRequest() {
         String content;
+        System.out.println(Thread.currentThread().getName());
         try {
             while ((content = in.readLine()) != null) {
                 if (content.startsWith("*")) {
@@ -137,23 +139,23 @@ public class Redis {
                         long timeOutDuration = Integer.parseInt(commands[2]);
                         long currMill = System.currentTimeMillis();
                         int sz = listHashMap.getOrDefault(key, new ArrayList<>()).size();
-                        boolean f = false;
-//                        while(timeOutDuration == 0 || (System.currentTimeMillis() - currMill) < timeOutDuration){
-//                            List<String> lst = listHashMap.getOrDefault(key, new ArrayList<>());
-//                            if(lst.size() != sz){
-//                                f = true;
-//                                StringBuilder msg = new StringBuilder();
-//                                msg.append("*").append("2").append("\r\n");
-//                                msg.append("$").append(lst.size()).append("\r\n");
-//                                msg.append(key).append("\r\n");
-//                                String value = lst.getFirst();
-//                                lst.removeFirst();
-//                                msg.append("$").append(value.length()).append("\r\n");
-//                                msg.append(value).append("\r\n");
-//                                sendMessage(msg.toString());
-//                                break;
-//                            }
-//                        }
+                        boolean f = true;
+                        while(true){
+                            List<String> lst = listHashMap.getOrDefault(key, new ArrayList<>());
+                            if(lst.size() != sz){
+                                f = false;
+                                StringBuilder msg = new StringBuilder();
+                                msg.append("*").append("2").append("\r\n");
+                                msg.append("$").append(key.length()).append("\r\n");
+                                msg.append(key).append("\r\n");
+                                String value = lst.getFirst();
+                                lst.removeFirst();
+                                msg.append("$").append(value.length()).append("\r\n");
+                                msg.append(value).append("\r\n");
+                                sendMessage(msg.toString());
+                                break;
+                            }
+                        }
 //                        if(f){
 //                            sendMessage("*-1\r\n");
 //                        }
