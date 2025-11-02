@@ -140,7 +140,7 @@ public class Redis {
                     }
                     else if(redisCommand.equalsIgnoreCase("blpop")){
                         String key = commands[1];
-                        long timeOutDuration = (Integer.parseInt(commands[2])) * 1000L;
+                        long timeOutDuration = (long) ((Double.parseDouble(commands[2])) * 1000L);
                         long currMill = System.currentTimeMillis();
                         int sz = listHashMap.getOrDefault(key, Collections.synchronizedList(new ArrayList<>())).size();
                         boolean f = true;
@@ -159,8 +159,7 @@ public class Redis {
                                 sendMessage(msg.toString());
                                 break;
                             }
-
-                            Thread.sleep(100);
+                            Thread.sleep(10);
                         }
                         if(f){
                             sendMessage("*-1\r\n");
