@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,9 +13,10 @@ public class Main {
             ServerSocket serverSocket = new ServerSocket(port);
             serverSocket.setReuseAddress(true);
             Map<String, List<String>> listHashMap = new ConcurrentHashMap<>();
+            Map<String, List<Map<String, String>>> xaddHashMap = new ConcurrentHashMap<>();
             while (true) {
                 Socket finalSocket = serverSocket.accept();
-                Redis redis = new Redis(finalSocket, listHashMap, new ConcurrentHashMap<>());
+                Redis redis = new Redis(finalSocket, listHashMap, new ConcurrentHashMap<>(), xaddHashMap);
                 new Thread(redis::handleRequest).start();
             }
         } catch (IOException ignored) {

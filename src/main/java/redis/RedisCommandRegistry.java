@@ -4,6 +4,7 @@ import redis.commandhelper.*;
 import redis.dto.ValueWithTime;
 import redis.interfce.IRedisCommandExecutor;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -11,10 +12,14 @@ import java.util.concurrent.ConcurrentHashMap;
 public class RedisCommandRegistry {
     private final Map<String, List<String>> hashMapWithListString;
     private final Map<String, ValueWithTime> valueWithTimeMap;
+    private final Map<String, List<Map<String, String>>> xaddHashMap;
 
-    public RedisCommandRegistry(Map<String, List<String>> hashMapWithListString, Map<String, ValueWithTime> valueWithTimeMap){
+    public RedisCommandRegistry(Map<String, List<String>> hashMapWithListString,
+                                Map<String, ValueWithTime> valueWithTimeMap,
+                                Map<String, List<Map<String, String>>> xaddHashMap){
         this.hashMapWithListString = hashMapWithListString;
         this.valueWithTimeMap = valueWithTimeMap;
+        this.xaddHashMap = xaddHashMap;
     }
 
     public Map<String, IRedisCommandExecutor> load(){
@@ -29,7 +34,9 @@ public class RedisCommandRegistry {
         commandExecutorMap.put("lpop", new LPopCommandExecutor(hashMapWithListString));
         commandExecutorMap.put("lrange", new LRangeCommandExecutor(hashMapWithListString));
         commandExecutorMap.put("blpop", new BLPopCommandExecutor(hashMapWithListString));
-        commandExecutorMap.put("type", new TypeRedisCommandExecutor(valueWithTimeMap));
+        commandExecutorMap.put("type", new TypeRedisCommandExecutor(valueWithTimeMap, xaddHashMap));
+        commandExecutorMap.put("xadd", new XAddCommandExecutor(xaddHashMap));
+
         return commandExecutorMap;
     }
 }

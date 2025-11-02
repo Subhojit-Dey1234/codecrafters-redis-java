@@ -13,10 +13,11 @@ public class Redis {
     private final RedisCommandRegistry redisCommandRegistry;
 
     public Redis(Socket clientSocket, Map<String, List<String>> listHashMap,
-                 Map<String, ValueWithTime> valueWithTimeMap) throws IOException {
+                 Map<String, ValueWithTime> valueWithTimeMap,
+                 Map<String, List<Map<String, String>>> xaddHashMap) throws IOException {
         this.in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
         this.outputStream = new BufferedWriter(new OutputStreamWriter(clientSocket.getOutputStream()));
-        this.redisCommandRegistry = new RedisCommandRegistry(listHashMap, valueWithTimeMap);
+        this.redisCommandRegistry = new RedisCommandRegistry(listHashMap, valueWithTimeMap, xaddHashMap);
     }
 
     public void handleRequest() {
