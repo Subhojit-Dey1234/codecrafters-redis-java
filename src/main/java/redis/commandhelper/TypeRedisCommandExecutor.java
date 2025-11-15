@@ -27,7 +27,8 @@ public class TypeRedisCommandExecutor implements IRedisCommandExecutor {
         var xaddObj = xaddHashMap.get(key);
         if(valueForMap != null)
             return "+string\r\n";
-        if(xaddObj != null) return "+stream\r\n";
+        if(xaddObj != null)
+            return "+stream\r\n";
         return "+none\r\n";
     }
 }
