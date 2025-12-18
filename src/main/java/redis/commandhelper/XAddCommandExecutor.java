@@ -62,7 +62,7 @@ public class XAddCommandExecutor implements IRedisCommandExecutor {
 
         // If stream exists and has entries, validate against last entry
         if (lst != null && !lst.isEmpty()) {
-            Map<String, String> lastEntry = lst.get(lst.size() - 1);
+            Map<String, String> lastEntry = lst.getLast();
             String lastId = lastEntry.get("id");
             String[] lastParts = lastId.split("-");
             long lastMillis = Long.parseLong(lastParts[0]);
@@ -75,6 +75,6 @@ public class XAddCommandExecutor implements IRedisCommandExecutor {
             }
         }
 
-        return null; // Validation passed
+        return null;
     }
 }
