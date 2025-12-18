@@ -65,6 +65,9 @@ public class XRangeCommandExecutor implements IRedisCommandExecutor {
     }
 
     private String normalizeStartId(String id) {
+        if(id.equals("-")){
+            return "0-0";
+        }
         if (!id.contains("-")) {
             return id + "-0";
         }
