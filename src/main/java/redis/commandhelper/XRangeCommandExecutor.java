@@ -65,19 +65,14 @@ public class XRangeCommandExecutor implements IRedisCommandExecutor {
     }
 
     private String normalizeStartId(String id) {
-        if(id.equals("-")){
-            return "0-0";
-        }
-        if (!id.contains("-")) {
-            return id + "-0";
-        }
+        if(id.equals("-"))return "0-0";
+        if (!id.contains("-")) return id + "-0";
         return id;
     }
 
     private String normalizeEndId(String id) {
-        if (!id.contains("-")) {
-            return id + "-" + Long.MAX_VALUE;
-        }
+        if(id.equals("+")) return Long.MAX_VALUE + "-" + Long.MAX_VALUE;
+        if (!id.contains("-")) return id + "-" + Long.MAX_VALUE;
         return id;
     }
 
