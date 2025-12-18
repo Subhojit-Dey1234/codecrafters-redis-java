@@ -45,17 +45,28 @@ public class XAddCommandExecutor implements IRedisCommandExecutor {
     }
 
     private String autoGenerateId(String key, String id) {
-        // If ID doesn't contain *, return as-is
+        // Case 1: Full auto-generation (id is just "*")
+        if ("*".equals(id)) {
+            long currentTimeMillis = System.currentTimeMillis();
+            long sequenceNumber = generateSequenceNumber(key, currentTimeMillis);
+            return currentTimeMillis + "-" + sequenceNumber;
+        }
+
+        // Case 2: No auto-generation needed
         if (!id.contains("*")) {
             return id;
         }
 
-        // Parse the ID
+        // Case 3: Partial auto-generation (id is like "1234-*")
         String[] parts = id.split("-");
+        if (parts.length != 2) {
+            return id; // Return as-is if invalid format
+        }
+
         long millis = Long.parseLong(parts[0]);
 
         // Check if sequence number needs to be auto-generated
-        if (parts[1].equals("*")) {
+        if ("*".equals(parts[1])) {
             long sequenceNumber = generateSequenceNumber(key, millis);
             return millis + "-" + sequenceNumber;
         }
@@ -107,6 +118,10 @@ public class XAddCommandExecutor implements IRedisCommandExecutor {
 
         // Parse the new ID
         String[] parts = id.split("-");
+        if (parts.length != 2) {
+            return "-ERR Invalid stream ID format\r\n";
+        }
+
         long newMillis = Long.parseLong(parts[0]);
         long newSeq = Long.parseLong(parts[1]);
 
