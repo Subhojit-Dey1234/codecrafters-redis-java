@@ -36,6 +36,7 @@ public class RedisCommandRegistry {
         commandExecutorMap.put("blpop", new BLPopCommandExecutor(hashMapWithListString));
         commandExecutorMap.put("type", new TypeRedisCommandExecutor(valueWithTimeMap, xaddHashMap));
         commandExecutorMap.put("xadd", new XAddCommandExecutor(xaddHashMap));
+        commandExecutorMap.put("xrange", new XRangeCommandExecutor(xaddHashMap));
 
         return commandExecutorMap;
     }
