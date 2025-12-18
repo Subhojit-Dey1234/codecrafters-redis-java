@@ -23,8 +23,11 @@ public class XAddCommandExecutor implements IRedisCommandExecutor {
         String key = commands[1];
         String id = commands[2];
 
-        // Validate the ID first
-        String validationError = validateId(key, id);
+        // Auto-generate ID if needed
+        String finalId = autoGenerateId(key, id);
+
+        // Validate the ID
+        String validationError = validateId(key, finalId);
         if (validationError != null) {
             return validationError;
         }
@@ -33,12 +36,67 @@ public class XAddCommandExecutor implements IRedisCommandExecutor {
                 _ -> Collections.synchronizedList(new ArrayList<>())
         );
         Map<String, String> mp = new ConcurrentHashMap<>();
-        mp.put("id", id);
+        mp.put("id", finalId);
         for(int i = 3; i < commands.length-1; i+= 2){
             mp.put(commands[i], commands[i+1]);
         }
         lst.add(mp);
-        return "$" + id.length() + "\r\n" + id + "\r\n";
+        return "$" + finalId.length() + "\r\n" + finalId + "\r\n";
+    }
+
+    private String autoGenerateId(String key, String id) {
+        // If ID doesn't contain *, return as-is
+        if (!id.contains("*")) {
+            return id;
+        }
+
+        // Parse the ID
+        String[] parts = id.split("-");
+        long millis = Long.parseLong(parts[0]);
+
+        // Check if sequence number needs to be auto-generated
+        if (parts[1].equals("*")) {
+            long sequenceNumber = generateSequenceNumber(key, millis);
+            return millis + "-" + sequenceNumber;
+        }
+
+        return id;
+    }
+
+    private long generateSequenceNumber(String key, long millis) {
+        List<Map<String, String>> lst = this.xaddHashMap.get(key);
+
+        // If stream is empty or doesn't exist
+        if (lst == null || lst.isEmpty()) {
+            // Special case: if time part is 0, start sequence at 1
+            return (millis == 0) ? 1 : 0;
+        }
+
+        // Find the last entry with the same time part
+        long lastSequenceWithSameTime = -1;
+        for (int i = lst.size() - 1; i >= 0; i--) {
+            Map<String, String> entry = lst.get(i);
+            String entryId = entry.get("id");
+            String[] entryParts = entryId.split("-");
+            long entryMillis = Long.parseLong(entryParts[0]);
+
+            if (entryMillis == millis) {
+                lastSequenceWithSameTime = Long.parseLong(entryParts[1]);
+                break;
+            } else if (entryMillis < millis) {
+                // We've gone past entries with this time part
+                break;
+            }
+        }
+
+        // If no entries exist with this time part
+        if (lastSequenceWithSameTime == -1) {
+            // Special case: if time part is 0, start sequence at 1
+            return (millis == 0) ? 1 : 0;
+        }
+
+        // Increment the last sequence number
+        return lastSequenceWithSameTime + 1;
     }
 
     private String validateId(String key, String id) {
