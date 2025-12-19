@@ -5,10 +5,17 @@ import redis.interfce.IRedisCommandExecutor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.TimeUnit;
 
 public class XReadCommandExecutor implements IRedisCommandExecutor {
 
     private final Map<String, List<Map<String, String>>> xaddHashMap;
+    private final Map<String, List<BlockedClient>> blockedClients = new ConcurrentHashMap<>();
+    private final Lock lock = new ReentrantLock();
 
     public XReadCommandExecutor(Map<String, List<Map<String, String>>> xaddHashMap){
         this.xaddHashMap = xaddHashMap;
@@ -16,15 +23,16 @@ public class XReadCommandExecutor implements IRedisCommandExecutor {
 
     @Override
     public String getMessage(String[] commands) {
-        // Parse command: XREAD STREAMS <key1> <key2> ... <id1> <id2> ...
-        // commands[0] = "XREAD"
-        // commands[1] = "STREAMS"
-        // commands[2..n] = keys, then IDs
+        // Parse command: XREAD [BLOCK <ms>] STREAMS <key1> <key2> ... <id1> <id2> ...
 
-        // Find where keys end and IDs begin
-        // The number of keys equals the number of IDs
+        int blockTimeout = -1; // -1 means no blocking
         int streamsIndex = -1;
+
+        // Check for BLOCK option
         for (int i = 0; i < commands.length; i++) {
+            if ("BLOCK".equalsIgnoreCase(commands[i]) && i + 1 < commands.length) {
+                blockTimeout = Integer.parseInt(commands[i + 1]);
+            }
             if ("STREAMS".equalsIgnoreCase(commands[i])) {
                 streamsIndex = i;
                 break;
@@ -52,10 +60,82 @@ public class XReadCommandExecutor implements IRedisCommandExecutor {
             ids[i] = commands[streamsIndex + 1 + numStreams + i];
         }
 
+        // Try to get results immediately
+        String result = getStreamResults(keys, ids);
+
+        // If we have results or no blocking requested, return immediately
+        if (!result.equals("*-1\r\n") || blockTimeout == -1) {
+            return result;
+        }
+
+        // If blocking is requested and no results, block and wait
+        return blockAndWait(keys, ids, blockTimeout);
+    }
+
+    private String blockAndWait(String[] keys, String[] ids, int timeoutMs) {
+        lock.lock();
+        try {
+            Condition condition = lock.newCondition();
+            BlockedClient client = new BlockedClient(keys, ids, condition);
+
+            // Register this client as blocked for each stream
+            for (String key : keys) {
+                blockedClients.computeIfAbsent(key, k -> new ArrayList<>()).add(client);
+            }
+
+            try {
+                // Wait for timeout or notification
+                if (timeoutMs == 0) {
+                    condition.await(); // Block indefinitely
+                } else {
+                    condition.await(timeoutMs, TimeUnit.MILLISECONDS);
+                }
+
+                // Check if we have results now
+                String result = getStreamResults(keys, ids);
+                return result;
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return "*-1\r\n";
+            } finally {
+                // Unregister the client
+                for (String key : keys) {
+                    List<BlockedClient> clients = blockedClients.get(key);
+                    if (clients != null) {
+                        clients.remove(client);
+                        if (clients.isEmpty()) {
+                            blockedClients.remove(key);
+                        }
+                    }
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    // This method should be called when a new entry is added via XADD
+    public void notifyBlockedClients(String key) {
+        lock.lock();
+        try {
+            List<BlockedClient> clients = blockedClients.get(key);
+            if (clients != null) {
+                // Notify all blocked clients waiting on this stream
+                for (BlockedClient client : new ArrayList<>(clients)) {
+                    client.condition.signal();
+                }
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private String getStreamResults(String[] keys, String[] ids) {
         // Process each stream and collect results
         List<StreamResult> results = new ArrayList<>();
 
-        for (int i = 0; i < numStreams; i++) {
+        for (int i = 0; i < keys.length; i++) {
             String key = keys[i];
             String startId = ids[i];
 
@@ -81,9 +161,9 @@ public class XReadCommandExecutor implements IRedisCommandExecutor {
             }
         }
 
-        // If no streams have results, return null bulk string
+        // If no streams have results, return null array
         if (results.isEmpty()) {
-            return "$-1\r\n";
+            return "*-1\r\n";
         }
 
         // Build RESP response
@@ -166,6 +246,19 @@ public class XReadCommandExecutor implements IRedisCommandExecutor {
         StreamResult(String key, List<Map<String, String>> entries) {
             this.key = key;
             this.entries = entries;
+        }
+    }
+
+    // Helper class to track blocked clients
+    private static class BlockedClient {
+        String[] keys;
+        String[] ids;
+        Condition condition;
+
+        BlockedClient(String[] keys, String[] ids, Condition condition) {
+            this.keys = keys;
+            this.ids = ids;
+            this.condition = condition;
         }
     }
 }
