@@ -10,8 +10,6 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class XReadCommandExecutor implements IRedisCommandExecutor {
-
-    // Shared across ALL executors (important)
     private static final Lock LOCK = new ReentrantLock();
     private static final Map<String, List<Condition>> WAITERS = new ConcurrentHashMap<>();
 
