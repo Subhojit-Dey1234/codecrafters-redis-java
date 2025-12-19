@@ -49,7 +49,13 @@ public class XReadCommandExecutor implements IRedisCommandExecutor {
 
         for (int i = 0; i < n; i++) {
             keys[i] = commands[streamsIndex + 1 + i];
-            ids[i] = commands[streamsIndex + 1 + n + i];
+            String rawId = commands[streamsIndex + 1 + n + i];
+
+            if ("$".equals(rawId)) {
+                ids[i] = resolveDollarId(keys[i]);
+            } else {
+                ids[i] = rawId;
+            }
         }
 
         String immediate = getStreamResults(keys, ids);
@@ -59,6 +65,16 @@ public class XReadCommandExecutor implements IRedisCommandExecutor {
 
         return blockAndWait(keys, ids, blockTimeout);
     }
+
+    private String resolveDollarId(String key) {
+        List<Map<String, String>> stream = xaddHashMap.get(key);
+        if (stream == null || stream.isEmpty()) {
+            // Redis treats empty stream as 0-0
+            return "0-0";
+        }
+        return stream.get(stream.size() - 1).get("id");
+    }
+
 
     private String blockAndWait(String[] keys, String[] ids, int timeoutMs) {
         Condition condition = null;
