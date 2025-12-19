@@ -16,75 +16,124 @@ public class XReadCommandExecutor implements IRedisCommandExecutor {
 
     @Override
     public String getMessage(String[] commands) {
-        String key = commands[2];
-        String startId = commands[3];
+        // Parse command: XREAD STREAMS <key1> <key2> ... <id1> <id2> ...
+        // commands[0] = "XREAD"
+        // commands[1] = "STREAMS"
+        // commands[2..n] = keys, then IDs
 
-        List<Map<String, String>> listStream = xaddHashMap.get(key);
-
-        // If stream doesn't exist or is empty, return null bulk string
-        if (listStream == null || listStream.isEmpty()) {
-            return "$-1\r\n";
-        }
-
-        // Find all entries with ID greater than startId (exclusive)
-        List<Map<String, String>> entriesAfterStart = new ArrayList<>();
-        for (Map<String, String> entry : listStream) {
-            String entryId = entry.get("id");
-            if (compareIds(entryId, startId) > 0) {
-                entriesAfterStart.add(entry);
+        // Find where keys end and IDs begin
+        // The number of keys equals the number of IDs
+        int streamsIndex = -1;
+        for (int i = 0; i < commands.length; i++) {
+            if ("STREAMS".equalsIgnoreCase(commands[i])) {
+                streamsIndex = i;
+                break;
             }
         }
 
-        // If no entries found after startId, return null bulk string
-        if (entriesAfterStart.isEmpty()) {
+        if (streamsIndex == -1) {
+            return "-ERR STREAMS keyword not found\r\n";
+        }
+
+        // Calculate number of streams
+        int totalArgs = commands.length - streamsIndex - 1;
+        if (totalArgs % 2 != 0) {
+            return "-ERR wrong number of arguments\r\n";
+        }
+
+        int numStreams = totalArgs / 2;
+
+        // Extract keys and IDs
+        String[] keys = new String[numStreams];
+        String[] ids = new String[numStreams];
+
+        for (int i = 0; i < numStreams; i++) {
+            keys[i] = commands[streamsIndex + 1 + i];
+            ids[i] = commands[streamsIndex + 1 + numStreams + i];
+        }
+
+        // Process each stream and collect results
+        List<StreamResult> results = new ArrayList<>();
+
+        for (int i = 0; i < numStreams; i++) {
+            String key = keys[i];
+            String startId = ids[i];
+
+            List<Map<String, String>> listStream = xaddHashMap.get(key);
+
+            // Skip if stream doesn't exist or is empty
+            if (listStream == null || listStream.isEmpty()) {
+                continue;
+            }
+
+            // Find all entries with ID greater than startId (exclusive)
+            List<Map<String, String>> entriesAfterStart = new ArrayList<>();
+            for (Map<String, String> entry : listStream) {
+                String entryId = entry.get("id");
+                if (compareIds(entryId, startId) > 0) {
+                    entriesAfterStart.add(entry);
+                }
+            }
+
+            // Only add to results if there are entries
+            if (!entriesAfterStart.isEmpty()) {
+                results.add(new StreamResult(key, entriesAfterStart));
+            }
+        }
+
+        // If no streams have results, return null bulk string
+        if (results.isEmpty()) {
             return "$-1\r\n";
         }
 
         // Build RESP response
         StringBuilder response = new StringBuilder();
 
-        // Outer array: array of streams (we only have 1 stream)
-        response.append("*1\r\n");
+        // Outer array: array of streams
+        response.append("*").append(results.size()).append("\r\n");
 
-        // Each stream is an array of 2 elements: [key, entries]
-        response.append("*2\r\n");
-
-        // First element: stream key as bulk string
-        response.append("$").append(key.length()).append("\r\n");
-        response.append(key).append("\r\n");
-
-        // Second element: array of entries
-        response.append("*").append(entriesAfterStart.size()).append("\r\n");
-
-        // Build each entry
-        for (Map<String, String> entry : entriesAfterStart) {
-            String entryId = entry.get("id");
-
-            // Each entry is an array of 2 elements: [id, field-value pairs]
+        // Build each stream result
+        for (StreamResult streamResult : results) {
+            // Each stream is an array of 2 elements: [key, entries]
             response.append("*2\r\n");
 
-            // First element: entry ID as bulk string
-            response.append("$").append(entryId.length()).append("\r\n");
-            response.append(entryId).append("\r\n");
+            // First element: stream key as bulk string
+            response.append("$").append(streamResult.key.length()).append("\r\n");
+            response.append(streamResult.key).append("\r\n");
 
-            // Second element: array of field-value pairs
-            List<String> fieldValuePairs = new ArrayList<>();
-            for (Map.Entry<String, String> e : entry.entrySet()) {
-                String k = e.getKey();
-                String v = e.getValue();
-                if (!k.equals("id")) {
-                    fieldValuePairs.add(k);
-                    fieldValuePairs.add(v);
+            // Second element: array of entries
+            response.append("*").append(streamResult.entries.size()).append("\r\n");
+
+            // Build each entry
+            for (Map<String, String> entry : streamResult.entries) {
+                String entryId = entry.get("id");
+
+                // Each entry is an array of 2 elements: [id, field-value pairs]
+                response.append("*2\r\n");
+
+                // First element: entry ID as bulk string
+                response.append("$").append(entryId.length()).append("\r\n");
+                response.append(entryId).append("\r\n");
+
+                // Second element: array of field-value pairs
+                List<String> fieldValuePairs = new ArrayList<>();
+                for (Map.Entry<String, String> e : entry.entrySet()) {
+                    String k = e.getKey();
+                    String v = e.getValue();
+                    if (!k.equals("id")) {
+                        fieldValuePairs.add(k);
+                        fieldValuePairs.add(v);
+                    }
                 }
-            }
 
-            // Array size for field-value pairs
-            response.append("*").append(fieldValuePairs.size()).append("\r\n");
+                // Array size for field-value pairs
+                response.append("*").append(fieldValuePairs.size()).append("\r\n");
 
-            // Add each field and value as bulk strings
-            for (String item : fieldValuePairs) {
-                response.append("$").append(item.length()).append("\r\n");
-                response.append(item).append("\r\n");
+                // Add each field and value as bulk strings
+                for (String item : fieldValuePairs) {
+                    response.append("$").append(item.length()).append("\r\n");
+                    response.append(item).append("\r\n");
+                }
             }
         }
 
@@ -107,5 +156,16 @@ public class XReadCommandExecutor implements IRedisCommandExecutor {
         long seq2 = Long.parseLong(parts2[1]);
 
         return Long.compare(seq1, seq2);
+    }
+
+    // Helper class to store stream results
+    private static class StreamResult {
+        String key;
+        List<Map<String, String>> entries;
+
+        StreamResult(String key, List<Map<String, String>> entries) {
+            this.key = key;
+            this.entries = entries;
+        }
     }
 }
