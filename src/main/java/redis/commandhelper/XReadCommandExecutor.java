@@ -86,8 +86,10 @@ public class XReadCommandExecutor implements IRedisCommandExecutor {
             try {
                 // Wait for timeout or notification
                 if (timeoutMs == 0) {
-                    condition.await(); // Block indefinitely
+                    // Block indefinitely until signaled
+                    condition.await();
                 } else {
+                    // Block with timeout
                     condition.await(timeoutMs, TimeUnit.MILLISECONDS);
                 }
 
